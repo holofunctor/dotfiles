@@ -1,0 +1,462 @@
+#+TITLE: Initial Configuration for Emacs
+#+STARTUP: showeverything
+
+* Configuration
+   
+:PROPERTIES:
+:CUSTOM_ID: babel-init
+:END:
+<<babel-init>> 
+
+* Package Related Configurations 
+** Initialize Packages & Add Sources  
+
+#+begin_src emacs-lisp :tangle yes
+  (require 'package)
+  ;; Add package sources, use local mirrors if necessary.
+  (unless (assoc-default "gnu" package-archives)
+    (add-to-list 'package-archives '("gnu" . "http://elpa.emacs-china.org/gnu/") t))
+  (unless (assoc-default "melpa" package-archives)
+    (add-to-list 'package-archives '("melpa" . "http://elpa.emacs-china.org/melpa/") t))
+  (unless (assoc-default "marmalade" package-archives)
+    (add-to-list 'package-archives '("marmalade" . "http://elpa.emacs-china.org/marmalade/") t))
+  (unless (assoc-default "org" package-archives)
+    (add-to-list 'package-archives '("org" . "http://elpa.emacs-china.org/org/") t))
+
+  ;; Initialize packages.
+  (package-initialize)
+
+#+END_SRC
+
+*** Synchornize Packages
+#+BEGIN_SRC emacs-lisp :tangle yes
+  ;; Reload list of packages after adding sources for the first time. 
+  (unless package-archive-contents
+      (package-refresh-contents))  
+
+  ;; Adopt the 'use-package' macro to synchornize packages and enable lazy loading.
+  (unless (package-installed-p 'use-package)
+    (package-install 'use-package))
+  ;; Toggle a global, automatic installation for package(s) not presenting on the system.
+  (setq use-package-always-ensure t)
+
+  (require 'use-package)
+
+  ;; Recompile elisp source files to avoid loading outdated byte code files.
+  (use-package auto-compile
+    :config (auto-compile-on-load-mode))
+  (setq load-prefer-newer t)
+#+END_SRC
+
+** Load Paths 
+To load files out the package system, append their paths to the =load-path=.
+#+BEGIN_SRC emacs-lisp :tangle yes
+  (add-to-list 'load-path "~/elisp")
+  ;; (add-to-list 'load-path "org path")
+  ;; (add-to-list 'load-path "/usr/local/share/emacs/site-lisp")
+  ;; (setq custom-file "~/.emacs.d/custom-settings.el")
+  ;; (load custom-file t)
+#+END_SRC
+
+** Personal Info
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+   (setq user-full-name "Claude Chiang"
+      user-mail-address "cloudyrie@gmail.com")
+#+END_SRC
+
+** Emacs Functions
+*** Benchmark Initialization
+#+BEGIN_SRC emacs-lisp :tangle yes
+(use-package benchmark-init
+  :ensure t
+  :config
+  ;; To disable collection of benchmark data after init is done.
+  (add-hook 'after-init-hook 'benchmark-init/deactivate))
+#+END_SRC
+
+*** Minor Modes
+Enable line numbers
+#+BEGIN_SRC emacs-lisp :tangle yes
+(global-nlinum-mode t)
+(setq nlinum-highlight-current-line t)
+;; Preset `nlinum-format' for minimum width.
+(defun nlinum-format-hook ()
+  (when nlinum-mode
+    (setq-local nlinum-format
+                (concat " %" (number-to-string
+                             ;; Guesstimate number of buffer lines.
+                             (ceiling (log (max 1 (/ (buffer-size) 80)) 10)))
+                        "d "))))
+(add-hook 'nlinum-mode-hook #'nlinum-format-hook)
+#+END_SRC
+
+Company mode for code completion.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(global-company-mode t)
+#+END_SRC
+
+Winner mode to switch between window configuration.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(when (fboundp 'winner-mode)
+  (winner-mode 1))
+#+END_SRC
+
+Parenthesis settings: highlight and insert by pairs　using smartparens package.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(use-package smartparens
+  :init
+  (progn
+    (require 'smartparens-config)
+    ;; (use-package smartparens-python)
+    ;; (use-package smartparens-html)
+    (smartparens-global-mode 1)
+    (show-smartparens-global-mode 1))
+  :config
+  (progn
+    (setq smartparens-strict-mode t)
+    (sp-local-pair 'emacs-lisp-mode "`" nil :when '(sp-in-string-p)))
+  :bind
+  ;; need customizing
+  (("C-M-k" . sp-kill-sexp-with-a-twist-of-lime)
+   ("C-M-f" . sp-forward-sexp)
+   ("C-M-b" . sp-backward-sexp)
+   ("C-M-n" . sp-up-sexp)
+   ("C-M-d" . sp-down-sexp)
+   ("C-M-u" . sp-backward-up-sexp)
+   ("C-M-p" . sp-backward-down-sexp)
+   ("C-M-w" . sp-copy-sexp)
+   ("M-s" . sp-splice-sexp)
+   ("M-r" . sp-splice-sexp-killing-around)
+   ("C-)" . sp-forward-slurp-sexp)
+   ("C-}" . sp-forward-barf-sexp)
+   ("C-(" . sp-backward-slurp-sexp)
+   ("C-{" . sp-backward-barf-sexp)
+   ("M-S" . sp-split-sexp)
+   ("M-J" . sp-join-sexp)
+   ("C-M-t" . sp-transpose-sexp)))
+#+END_SRC
+
+Make Deletion smart.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(delete-selection-mode t)
+;; smart hungry delete to handle whitespace between words.
+(use-package smart-hungry-delete
+  :ensure t
+  :bind (("<backspace>" . smart-hungry-delete-backward-char)
+		 ("C-d" . smart-hungry-delete-forward-char))
+  :defer nil ;; dont defer so we can add our functions to hooks 
+  :config (smart-hungry-delete-add-default-hooks)
+  )
+#+END_SRC
+
+*** Recent files
+#+BEGIN_SRC emacs-lisp :tangle yes
+(require 'recentf)
+(setq recentf-max-saved-items 200
+      recentf-max-menu-items 15)
+(recentf-mode)
+#+END_SRC
+
+*** Interfaces
+
+Enable a more smooth scrolling.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
+(setq mouse-wheel-progressive-speed nil)
+#+END_SRC
+
+Increase/decrease font size with mouse wheel.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(global-set-key [C-mouse-4] 'text-scale-increase)
+(global-set-key [C-mouse-5] 'text-scale-decrease)
+#+END_SRC
+
+
+*** Backups
+
+The following code stashes backup files in =~/.emacs.d/backups= to avoid the =~= files mess up current directory.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(setq backup-directory-alist '(("." . "~/.emacs.d/backups")))
+#+END_SRC
+
+Save different versions.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(setq delete-old-versions -1)
+(setq version-control t)
+(setq vc-make-backup-files t)
+(setq auto-save-file-name-transforms '((".*" "~/.emacs.d/auto-save-list/" t)))
+#+END_SRC
+
+*** Navigation
+Pop to mark.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(bind-key "C-x p" 'pop-to-mark-command)
+(setq set-mark-command-repeat-pop t)
+#+END_SRC
+
+Move between windows more naturally.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(use-package windmove
+  :bind
+  (("<f2> <right>" . windmove-right)
+   ("<f2> <left>" . windmove-left)
+   ("<f2> <up>" . windmove-up)
+   ("<f2> <down>" . windmove-down)
+   ))
+#+END_SRC
+
+More window movement.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(use-package switch-window
+  :bind (("C-x o" . switch-window)))
+#+END_SRC
+
+*** Misc
+Change "yes or no" to "y or n".
+#+BEGIN_SRC emacs-lisp :tangle yes
+(fset 'yes-or-no-p 'y-or-n-p)
+#+END_SRC
+
+Smarter move-to-beginning-of-line
+#+BEGIN_SRC emacs-lisp :tangle yes
+(defun smarter-move-beginning-of-line (arg)
+  "Move point back to indentation of beginning of line.
+
+Move point to the first non-whitespace character on this line.
+If point is already there, move to the beginning of the line.
+Effectively toggle between the first non-whitespace character and
+the beginning of the line.
+
+If ARG is not nil or 1, move forward ARG - 1 lines first.  If
+point reaches the beginning or end of the buffer, stop there."
+  (interactive "^p")
+  (setq arg (or arg 1))
+
+  ;; Move lines first
+  (when (/= arg 1)
+    (let ((line-move-visual nil))
+      (forward-line (1- arg))))
+
+  (let ((orig-point (point)))
+    (back-to-indentation)
+    (when (= orig-point (point))
+      (move-beginning-of-line 1))))
+
+;; remap C-a to `smarter-move-beginning-of-line'
+(global-set-key [remap move-beginning-of-line]
+                'smarter-move-beginning-of-line)
+#+END_SRC
+
+Clean up spaces.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(bind-key "M-SPC" 'cycle-spacing)
+#+END_SRC
+
+** Styles
+*** Window decorations
+#+BEGIN_SRC emacs-lisp :tangle yes
+(menu-bar-mode -1)                 ;; disable menu bar.
+(tool-bar-mode -1)                 ;; disable tool bar.
+(scroll-bar-mode -1)               ;; disable scroll bar.
+(setq inhibit-splash-screen t)     ;; disable splash screen.
+(setq-default cursor-type 'bar)    ;; set cursor type.
+(setq-default left-margin-width 1 right-margin-width 0) ;; set margin within buffer.
+#+END_SRC
+
+*** Fonts
+Set default font for emacs.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(defun set-default-font (plists)
+  "Set the font given the passed PLISTS. (codes from spacemacs-core)
+PLISTS has either the form (\"fontname\" :prop1 val1 :prop2 val2 ...)
+or is a list of such. The first font that can be found will be used.
+The return value is nil if no font was found, truthy otherwise."
+  (unless (listp (car plists))
+    (setq plists (list plists)))
+  (catch 'break
+    (dolist (plist plists)
+      (when (find-font (font-spec :name (car plist)))
+        (let* ((font (car plist))
+               (props (cdr plist))
+               (fontspec (apply 'font-spec :name font props)))
+          (set-frame-font fontspec nil t)
+          (push `(font . ,(frame-parameter nil 'font)) default-frame-alist)
+         ))
+    nil))
+ )
+
+(set-default-font '("Source Code Pro"
+                    :size 18
+                    :weight normal
+                    :width normal))
+
+;; Set chinese font (配制中文字体)
+(dolist (charset '(kana han symbol cjk-misc bopomofo))
+  (set-fontset-font (frame-parameter nil 'font)
+                    charset
+		    (font-spec :family "WenQuanYi Micro Hei Mono" :size 18)))
+#+END_SRC
+
+*** Adopt "doom-one" theme
+#+BEGIN_SRC emacs-lisp :tangle yes
+(require 'doom-themes)
+;; Global settings (defaults)
+(setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+      doom-themes-enable-italic t) ; if nil, italics is universally disabled
+;; Enable flashing mode-line on errors
+(doom-themes-visual-bell-config)
+
+;; Enable custom neotree theme
+(doom-themes-neotree-config)  ; all-the-icons fonts must be installed!
+
+;; Corrects (and improves) org-mode's native fontification.
+(doom-themes-org-config)
+#+END_SRC
+
+Include "doom-modeline" plugin.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(add-to-list 'load-path "~/.emacs.d/plugins/doom-modeline")
+(require 'doom-modeline)
+#+END_SRC
+
+** Coding
+*** UTF-8
+#+BEGIN_SRC emacs-lisp :tangle yes
+(prefer-coding-system 'utf-8)
+(when (display-graphic-p)
+  (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING)))
+#+END_SRC
+
+*** Org mode
+Particular settings for org mode
+#+BEGIN_SRC emacs-lisp :tangle yes
+;; Org mode configurations
+(with-eval-after-load 'org
+  (setq org-src-fontify-natively t))
+#+END_SRC
+
+Fix linum/nlinum issues in org mode
+#+BEGIN_SRC emacs-lisp :tangle yes
+;; Fix linum/nlinum issues in org mode
+(let ((height (face-attribute 'default :height)))
+  ;; for all linum/nlinum users
+  (set-face-attribute 'linum nil :height height)
+)
+#+END_SRC
+
+*** LaTeX mode
+Particular settings for LaTeX mode
+#+BEGIN_SRC emacs-lisp :tangle yes
+;; LaTeX mode configurations
+(use-package auctex
+  :defer t
+  :ensure t)
+(setq TeX-auto-save t)
+(setq TeX-parse-self t)
+(setq-default TeX-master nil)
+(setq TeX-PDF-mode t)
+#+END_SRC
+
+** Plugins
+*** Helm for interactive compeletion
+Helm makes it easy to complete various things.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(use-package helm
+  :diminish helm-mode
+  :init
+  (progn
+    (require 'helm-config)
+    (setq helm-candidate-number-limit 100)
+    ;; From https://gist.github.com/antifuchs/9238468
+    (setq helm-idle-delay 0.0 ; update fast sources immediately (doesn't).
+          helm-input-idle-delay 0.01  ; this actually updates things
+				      ; reeeelatively quickly.
+
+	  helm-autoresize-mode 1 
+          helm-yas-display-key-on-candidate t
+          helm-quick-update t
+          helm-M-x-requires-pattern nil
+          helm-ff-skip-boring-files t)
+    (helm-mode))
+  :bind (("C-c h" . helm-mini)
+         ("C-h a" . helm-apropos)
+         ("C-x C-f" . helm-find-files)
+         ("C-x C-b" . helm-buffers-list)
+         ("C-x b" . helm-buffers-list)
+         ("M-y" . helm-show-kill-ring)
+         ("M-x" . helm-M-x)
+         ("C-x c o" . helm-occur)
+         ("C-x c s" . helm-swoop)
+         ("C-x c y" . helm-yas-complete)
+         ("C-x c Y" . helm-yas-create-snippet-on-region)
+         ("C-x c b" . my/helm-do-grep-book-notes)
+         ("C-x c SPC" . helm-all-mark-rings)))
+#+END_SRC
+
+Helm-descbinds for describing bindings.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(use-package helm-descbinds
+  :defer t
+  :bind (("C-h b" . helm-descbinds)
+         ("C-h w" . helm-descbinds)))
+#+END_SRC
+
+Use helm-swoop to find lines.
+#+BEGIN_SRC emacs-lisp :tangle yes
+(use-package helm-swoop
+ :bind
+ (("M-i" . helm-swoop)
+  ("M-I" . helm-swoop-back-to-last-point)
+  ("C-c M-i" . helm-multi-swoop)
+  ("C-x M-i" . helm-multi-swoop-all)
+  )
+ :config
+ (progn
+   (define-key isearch-mode-map (kbd "M-i") 'helm-swoop-from-isearch)
+   (define-key helm-swoop-map (kbd "M-i") 'helm-multi-swoop-all-from-helm-swoop))
+)
+#+END_SRC
+
+*** Yasnippet for code compeletion
+#+BEGIN_SRC emacs-lisp :tangle no
+(use-package yasnippet
+  :diminish yas-minor-mode
+  :init (yas-global-mode 1)
+  :config
+  (progn
+    (add-hook 'hippie-expand-try-functions-list 'yas-hippie-try-expand)
+    (setq yas-key-syntaxes '("w_" "w_." "^ "))
+    ;; (setq yas-installed-snippets-dir "~/elisp/yasnippet-snippets")
+    (setq yas-expand-only-for-last-commands nil)
+    (bind-key "\t" 'hippie-expand yas-minor-mode-map)))
+#+END_SRC
+
+*** Undo-tree
+#+BEGIN_SRC emacs-lisp :tangle yes
+(use-package undo-tree
+  :diminish undo-tree-mode
+  :config
+  (progn
+    (global-undo-tree-mode)
+    (setq undo-tree-visualizer-timestamps t)
+    (setq undo-tree-visualizer-diff t)))
+#+END_SRC
+
+*** flycheck
+#+BEGIN_SRC emacs-lisp :tangle yes
+(global-flycheck-mode 1)
+#+END_SRC
+
+** Customized Shortcuts
+
+*** Open init configurations
+#+BEGIN_SRC emacs-lisp :tangle yes
+(defun open-init()
+  (interactive)
+  (find-file "~/.emacs.d/cloudymacs.org"))
+
+(global-set-key (kbd "C-c i") 'open-init)
+#+END_SRC

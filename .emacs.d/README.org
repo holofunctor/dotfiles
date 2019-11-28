@@ -1,0 +1,12 @@
+#+TITLE: dotfiles README
+
+* My dotemacs configurations
+** Init files management in a neat way 
+   I'm using org files to manage my dotfiles for emacs, which provides a more neat 
+and consistent way to organize every piece of customizations. 
+now my =init.el= is a symlink to =cloudymacs.el=, which is produced by 
+=M-x org-bable-tangle(C-c C-v t)= within =cloudymacs.org=. 
+** License
+   [[https://i.creativecommons.org/l/by-sa/4.0/88x31.png]]
+
+   [[http://creativecommons.org/licenses/by-sa/4.0/][CC BY-SA 4.0]]
