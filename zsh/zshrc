@@ -1,0 +1,10 @@
+source $HOME/.config/zsh/envvar.zsh
+
+system=`uname -s | tr "[:upper:]" "[:lower:]"`
+source "$ZSH_CONFIG/$system.zsh"
+
+source "$ZSH_CONFIG/aliases.zsh"
+source "$ZSH_CONFIG/prompt.zsh"
+
+autoload -Uz compinit && compinit
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
